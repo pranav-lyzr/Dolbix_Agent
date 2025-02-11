@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
-import { Loader2, ChartBar, MessageSquare, Menu, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Loader2, ChartBar, MessageSquare, Menu, Download, FileText, FileSpreadsheet, ChartCandlestick } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import ReactMarkdown from "react-markdown";
 import 'jspdf-autotable';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { ChartViewer } from './components/ChartViewer';
 
 
 type LocationState = {
@@ -41,7 +42,7 @@ type ReportData = {
 };
 const ProcessFiles = () => {
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'performance' | 'chat'>('performance');
+  const [activeTab, setActiveTab] = useState<'performance' | 'chat' | 'chart'>('performance');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -116,7 +117,7 @@ const ProcessFiles = () => {
 
   const downloadMessageAsDoc = async (markdown: string) => {
     console.log('Markdown:', markdown);
-    const lines = markdown.text.split("\n"); // Split markdown into lines
+    const lines = markdown.split("\n"); // Split markdown into lines
     const paragraphs: Paragraph[] = [];
 
     lines.forEach((line) => {
@@ -234,8 +235,6 @@ const ProcessFiles = () => {
   };
 
   const simulateBotResponse = async (userMessage: string) => {
-    
-
     try {
         const response = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
             method: 'POST',
@@ -320,12 +319,14 @@ const ProcessFiles = () => {
         bg-white shadow-lg transition-all duration-300
         flex flex-col
       `}>
+        
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="p-4 hover:bg-gray-50 transition-colors"
         >
           <Menu className="w-6 h-6 text-gray-600" />
         </button>
+        
         
         <button 
           onClick={() => setActiveTab('performance')}
@@ -345,9 +346,22 @@ const ProcessFiles = () => {
             ${activeTab === 'chat' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-600'}
           `}
         >
+          
           <MessageSquare className="w-6 h-6" />
           {isSidebarOpen && <span>Chat</span>}
         </button>
+
+        {/* <button 
+          onClick={() => setActiveTab('chart')}
+          className={`
+            flex items-center p-4 gap-3 transition-colors
+            ${activeTab === 'chart' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-600'}
+          `}
+        >
+          
+          <ChartCandlestick className="w-6 h-6" />
+          {isSidebarOpen && <span>Chart</span>}
+        </button> */}
       </div>
       {/* Main Content */}
       <div className="flex-1 p-8">
@@ -467,7 +481,7 @@ const ProcessFiles = () => {
               </button>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'chat' ? (
           <div className="bg-white rounded-lg p-8 shadow-lg h-[calc(90vh)]">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Chat Assistant</h2>
             <div className="flex flex-col h-[75vh]">
@@ -493,7 +507,7 @@ const ProcessFiles = () => {
                           <ReactMarkdown className="text-sm">{message.text}</ReactMarkdown>
                           {message.sender === 'bot' && (
                             <button
-                              onClick={() => downloadMessageAsDoc(message)}
+                              onClick={() => downloadMessageAsDoc(message.text)}
                               className="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-700"
                             >
                               <Download className="w-4 h-4" />
@@ -535,7 +549,11 @@ const ProcessFiles = () => {
               </div>
             </div>
           </div>
-        )}
+        ): activeTab === 'chart' ? (
+          <div>
+            <ChartViewer/>
+          </div>
+        ):null}
       </div>
     </div>
   );

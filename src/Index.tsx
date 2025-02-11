@@ -120,11 +120,11 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white-50 to-purple-100">
+    <div className="min-h-screen bg-gradient-to-br from-white-50 to-blue-100">
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">
-            Excel Sheet Processor
+            Dolbix Performance Report Generator
           </h1>
           <p className="text-center mb-12 text-gray-600">
             Upload your Kitone, ZAC (ERP), and DataCode Mapping sheets for processing
