@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation, Navigate } from 'react-router-dom';
-import { Loader2, ChartBar, MessageSquare, Menu, Download, FileText, FileSpreadsheet, ChartCandlestick } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Loader2, ChartBar, MessageSquare, Menu, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import ReactMarkdown from "react-markdown";
@@ -206,32 +206,6 @@ const ProcessFiles = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const downloadChatAsDocx = (messages: Message[]) => {
-    const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: messages.map(message => new Paragraph({
-            children: [
-              new TextRun({
-                text: `${message.sender === 'user' ? 'You: ' : 'Bot: '}${message.text}`,
-                bold: message.sender === 'user',
-              }),
-            ],
-          })),
-        },
-      ],
-    });
-  
-    Packer.toBlob(doc).then(blob => {
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'chat_history.docx';
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
   };
 
   const simulateBotResponse = async (userMessage: string) => {
