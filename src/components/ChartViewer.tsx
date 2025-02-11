@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Loader2, Download } from 'lucide-react';
-import { useLocation, Navigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 type Message = {
   id: string;
