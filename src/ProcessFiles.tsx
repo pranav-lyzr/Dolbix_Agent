@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Loader2, ChartBar, MessageSquare, Menu, Download, Send , FileSpreadsheet, ChartCandlestick, ThumbsUp, ThumbsDown, MessageCircle, ChevronRight, ChevronLeft, CheckCircle, ChevronUp, ChevronDown, Info } from 'lucide-react';
+import { Loader2, ChartBar, MessageSquare, Menu, Download, Send , FileSpreadsheet, ChevronRight, ChevronLeft, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { jsPDF } from 'jspdf';
+// import { jsPDF } from 'jspdf';
 import ReactMarkdown from "react-markdown";
 import 'jspdf-autotable';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
@@ -21,16 +21,16 @@ type Message = {
   sender: 'user' | 'bot';
   timestamp: number;
   jsonData?: any;
-  votes: {
-    upvotes: number;
-    downvotes: number;
-  };
-  comments: {
-    id: string;
-    text: string;
-    timestamp: number;
-  }[];
-  showCommentInput?: boolean;
+  // votes: {
+  //   upvotes: number;
+  //   downvotes: number;
+  // };
+  // comments: {
+  //   id: string;
+  //   text: string;
+  //   timestamp: number;
+  // }[];
+  // showCommentInput?: boolean;
 };
 
 type ReportData = {
@@ -70,13 +70,13 @@ const ProcessFiles = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [reportData, setReportData] = useState<ReportData[]>([]);
-  const [showMonthlyView, setShowMonthlyView] = useState(false);
+  // const [reportData, setReportData] = useState<ReportData[]>([]);
+  // const [showMonthlyView, setShowMonthlyView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [kintoneValidation, setKintoneValidation] = useState('');
   const [zacValidation, setZacValidation] = useState('');
-  const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
+  // const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
   const [previousReports, setPreviousReports] = useState<ReportEntry[]>([]);
   const [sessionID, setSessionID] = useState<string>('');
 
@@ -274,7 +274,8 @@ const ProcessFiles = () => {
   };
   
 
-  const generateReport = async (isRegenerate = false) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const generateReport = async () => {
     setIsLoading(true);
     console.log(sessionID);
     try {
@@ -434,60 +435,60 @@ const ProcessFiles = () => {
     }
   };
 
-  const handleVote = (messageId: string, voteType: 'up' | 'down') => {
-    setMessages(prev => prev.map(message => {
-      if (message.id === messageId) {
-        return {
-          ...message,
-          votes: {
-            ...message.votes,
-            upvotes: voteType === 'up' ? message.votes.upvotes + 1 : message.votes.upvotes,
-            downvotes: voteType === 'down' ? message.votes.downvotes + 1 : message.votes.downvotes
-          }
-        };
-      }
-      return message;
-    }));
-  };
+  // const handleVote = (messageId: string, voteType: 'up' | 'down') => {
+  //   setMessages(prev => prev.map(message => {
+  //     if (message.id === messageId) {
+  //       return {
+  //         ...message,
+  //         votes: {
+  //           ...message.votes,
+  //           upvotes: voteType === 'up' ? message.votes.upvotes + 1 : message.votes.upvotes,
+  //           downvotes: voteType === 'down' ? message.votes.downvotes + 1 : message.votes.downvotes
+  //         }
+  //       };
+  //     }
+  //     return message;
+  //   }));
+  // };
 
-  const toggleCommentInput = (messageId: string) => {
-    setMessages(prev => prev.map(message => {
-      if (message.id === messageId) {
-        return {
-          ...message,
-          showCommentInput: !message.showCommentInput
-        };
-      }
-      return message;
-    }));
-  };
+  // const toggleCommentInput = (messageId: string) => {
+  //   setMessages(prev => prev.map(message => {
+  //     if (message.id === messageId) {
+  //       return {
+  //         ...message,
+  //         showCommentInput: !message.showCommentInput
+  //       };
+  //     }
+  //     return message;
+  //   }));
+  // };
 
-  const addComment = (messageId: string) => {
-    if (!newComment[messageId]?.trim()) return;
+  // const addComment = (messageId: string) => {
+  //   if (!newComment[messageId]?.trim()) return;
 
-    setMessages(prev => prev.map(message => {
-      if (message.id === messageId) {
-        return {
-          ...message,
-          comments: [
-            ...message.comments,
-            {
-              id: Date.now().toString(),
-              text: newComment[messageId],
-              timestamp: Date.now()
-            }
-          ],
-          showCommentInput: false
-        };
-      }
-      return message;
-    }));
+  //   setMessages(prev => prev.map(message => {
+  //     if (message.id === messageId) {
+  //       return {
+  //         ...message,
+  //         comments: [
+  //           ...message.comments,
+  //           {
+  //             id: Date.now().toString(),
+  //             text: newComment[messageId],
+  //             timestamp: Date.now()
+  //           }
+  //         ],
+  //         showCommentInput: false
+  //       };
+  //     }
+  //     return message;
+  //   }));
 
-    setNewComment(prev => ({
-      ...prev,
-      [messageId]: ''
-    }));
-  };
+  //   setNewComment(prev => ({
+  //     ...prev,
+  //     [messageId]: ''
+  //   }));
+  // };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -498,8 +499,8 @@ const ProcessFiles = () => {
       text: newMessage,
       sender: 'user',
       timestamp: Date.now(),
-      votes: { upvotes: 0, downvotes: 0 },
-      comments: []
+      // votes: { upvotes: 0, downvotes: 0 },
+      // comments: []
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -516,8 +517,8 @@ const ProcessFiles = () => {
       sender: 'bot',
       timestamp: Date.now(),
       jsonData: botResponses.jsonResponse,
-      votes: { upvotes: 0, downvotes: 0 },
-      comments: []
+      // votes: { upvotes: 0, downvotes: 0 },
+      // comments: []
     };
   
     setMessages(prev => [...prev, botMessage]);
@@ -963,7 +964,7 @@ const ProcessFiles = () => {
                       </button>
                     </div>
                     <button
-                      onClick={() => generateReport(true)}
+                      onClick={() => generateReport()}
                       className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                     >
                       Regenerate Report

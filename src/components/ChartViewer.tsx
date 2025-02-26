@@ -5,6 +5,14 @@ import { VegaLite } from 'react-vega';
 
 const LOCAL_STORAGE_KEY = 'chatHistory';
 
+type Message = {
+  id: string;
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: number;
+  imageJson?: any;
+};
+
 export const ChartViewer = () => {
   const location = useLocation();
   const [messages, setMessages] = useState(() => {
@@ -24,7 +32,7 @@ export const ChartViewer = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const simulateChartGeneration = async (prompt) => {
+  const simulateChartGeneration = async (prompt: string) => {
     setIsLoading(true);
     try {
       const response = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
@@ -60,11 +68,11 @@ export const ChartViewer = () => {
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     const userMessage = { id: Date.now().toString(), text: newMessage, sender: 'user', timestamp: Date.now() };
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev: Message[]) => [...prev, userMessage]);
     setNewMessage('');
     const response = await simulateChartGeneration(newMessage);
     const botMessage = { id: (Date.now() + 1).toString(), text: response.text, sender: 'bot', timestamp: Date.now(), imageJson: response.imageJson };
-    setMessages((prev) => [...prev, botMessage]);
+    setMessages((prev: Message[]) => [...prev, botMessage]);
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(messages));
 
   };
@@ -78,7 +86,7 @@ export const ChartViewer = () => {
             <div className="text-center text-gray-500 mt-8">Ask me to generate charts based on the performance data</div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => (
+              {messages.map((message: Message) => (
                 <div key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-lg p-3 ${message.sender === 'user' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
                     <p className="text-sm mb-2">{message.text}</p>
