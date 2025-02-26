@@ -13,8 +13,8 @@ const ProcessButton = ({ onClick, disabled }: ProcessButtonProps) => {
         transition-all duration-200 transform
         ${
           disabled
-            ? 'bg-blue-300 text-blue-500 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.99] hover:shadow-lg'
+            ? 'bg-purple-300 text-purple-500 cursor-not-allowed'
+            : 'bg-purple-600 text-white hover:bg-purple-700 active:scale-[0.99] hover:shadow-lg'
         }
       `}
     >
