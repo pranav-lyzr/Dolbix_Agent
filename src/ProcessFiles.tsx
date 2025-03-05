@@ -133,30 +133,30 @@ const ProcessFiles = () => {
     setIsValidating(true);
     try {
       // Validate Kintone Data
-      const kintoneResponse = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
+      const kintoneResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
         method: 'POST',
         headers: {
-          'x-api-key': 'sk-default-PPcvzcCe4cJRRP8JkEXnT51woYJUXzMZ',
+          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           user_id: "pranav@lyzr.ai",
-          agent_id: "67a445bc6e0d57ea618e9b52",
+          agent_id: "67c6a7490606a0f240482d8c",
           session_id: sessionID,
           message: JSON.stringify({ kintone_data: state.kitoneData })
         })
       });
   
       // Validate ZAC Data
-      const zacResponse = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
+      const zacResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
         method: 'POST',
         headers: {
-          'x-api-key': 'sk-default-PPcvzcCe4cJRRP8JkEXnT51woYJUXzMZ',
+          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           user_id: "pranav@lyzr.ai",
-          agent_id: "67a45c5d6e0d57ea618e9ce6",
+          agent_id: "67c6a7750606a0f240482d8d",
           session_id: sessionID,
           message: JSON.stringify({ zac_data: state.zacData })
         })
@@ -279,16 +279,16 @@ const ProcessFiles = () => {
     setIsLoading(true);
     console.log(sessionID);
     try {
-      const response = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
+      const response = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
         method: 'POST',
         headers: {
-          'x-api-key': 'sk-default-PPcvzcCe4cJRRP8JkEXnT51woYJUXzMZ',
+          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
           'Content-Type': 'application/json',
         },
     
         body: JSON.stringify({
           user_id: "pranav@lyzr.ai",
-          agent_id: "67b87724f32b3762113cd8b8",
+          agent_id: "67c6a7d30606a0f240482d8e",
           session_id: sessionID,
           message: JSON.stringify({
             zac_data: state?.zacData,
@@ -368,15 +368,15 @@ const ProcessFiles = () => {
   const simulateBotResponse = async (userMessage: string) => {
     try {
       // Call the first agent
-      const firstAgentResponse = await fetch('https://agent-dev.test.studio.lyzr.ai/v3/inference/chat/', {
+      const firstAgentResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
         method: 'POST',
         headers: {
-          'x-api-key': 'sk-default-PPcvzcCe4cJRRP8JkEXnT51woYJUXzMZ',
+          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           user_id: "pranav@lyzr.ai",
-          agent_id: "67a6f5bf5554cc81102b9fd0",
+          agent_id: "67c6a8578cfac3392e3a5ca5",
           session_id: sessionID,
           message: JSON.stringify({
             user_message: userMessage, // Pass user message
