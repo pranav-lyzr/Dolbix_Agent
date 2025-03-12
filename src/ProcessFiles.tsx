@@ -138,56 +138,88 @@ const ProcessFiles = () => {
   };
 
   const handleDataValidation = async () => {
-    console.log("printing ")
+    console.log("Starting validation...");
     setIsValidating(true);
-    const response = await fetch('https://dolbix-dev.test.studio.lyzr.ai/api/latest_uploads');
-    if (!response.ok) {
-      throw new Error('Failed to fetch latest uploads');
-    }
-    const data = await response.json();
-    console.log("data",data);
+  
     try {
-      // Validate Kintone Data
-      const kintoneResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
-        method: 'POST',
-        headers: {
-          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: "pranav@lyzr.ai",
-          agent_id: "67c6a7490606a0f240482d8c",
-          session_id: sessionID,
-          message: JSON.stringify({ kintone_data: data.crm.data })
-        })
-      });
+      // Fetch latest uploads
+      const response = await fetch('https://dolbix-dev.test.studio.lyzr.ai/api/latest_uploads');
+      if (!response.ok) throw new Error('Failed to fetch latest uploads');
   
-      // Validate ZAC Data
-      const zacResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
-        method: 'POST',
-        headers: {
-          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: "pranav@lyzr.ai",
-          agent_id: "67c6a7750606a0f240482d8d",
-          session_id: sessionID,
-          message: JSON.stringify({ zac_data: data.erp.data })
-        })
-      });
+      const data = await response.json();
+      console.log("Fetched data:", data);
   
-      const kintoneData = await kintoneResponse.json();
-      const zacData = await zacResponse.json();
+      // Helper function to chunk data
+      const chunkArray = (arr: any[], size: number): any[][] => {
+        const result: any[][] = [];
+        for (let i = 0; i < arr.length; i += size) {
+          result.push(arr.slice(i, i + size));
+        }
+        return result;
+      };
   
-      setKintoneValidation(kintoneData.response);
-      setZacValidation(zacData.response);
+      // Process Kintone Data in parallel
+      let kintoneValidationResults = [];
+      if (data.crm?.data?.length) {
+        const kintoneChunks = chunkArray(data.crm.data, 10); // Adjust chunk size as needed
+  
+        const kintonePromises = kintoneChunks.map(chunk =>
+          fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
+            method: 'POST',
+            headers: {
+              'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: "pranav@lyzr.ai",
+              agent_id: "67c6a7490606a0f240482d8c",
+              session_id: sessionID,
+              message: JSON.stringify({ kintone_data: chunk }),
+            }),
+          }).then(resp => resp.json())
+        );
+  
+        const kintoneResponses = await Promise.all(kintonePromises);
+        kintoneValidationResults = kintoneResponses.map(res => res.response);
+      }
+  
+      // Process ZAC Data in parallel
+      let zacValidationResults = [];
+      if (data.erp?.data?.length) {
+        const zacChunks = chunkArray(data.erp.data, 10); // Adjust chunk size as needed
+  
+        const zacPromises = zacChunks.map(chunk =>
+          fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
+            method: 'POST',
+            headers: {
+              'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: "pranav@lyzr.ai",
+              agent_id: "67c6a7750606a0f240482d8d",
+              session_id: sessionID,
+              message: JSON.stringify({ zac_data: chunk }),
+            }),
+          }).then(resp => resp.json())
+        );
+  
+        const zacResponses = await Promise.all(zacPromises);
+        zacValidationResults = zacResponses.map(res => res.response);
+      }
+  
+      // Store final validation results (flatten if necessary)
+      setKintoneValidation(kintoneValidationResults.flat().join('\n'));
+      setZacValidation(zacValidationResults.flat().join('\n'));
+  
     } catch (error) {
       console.error('Validation failed:', error);
     } finally {
       setIsValidating(false);
     }
   };
+  
+  
 
 
   // const downloadPDF = () => {
@@ -295,7 +327,13 @@ const ProcessFiles = () => {
     setIsModalOpen(false);
     setPendingAction(() => () => null); // Reset to a no-op function
   };
-
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  };
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchLatestReport = async () => {
     setIsLoading(true);
@@ -333,8 +371,8 @@ const ProcessFiles = () => {
         .join("\n");
       const latestReport = previousReports[0]?.data || [];
   
-      // const response = await fetch("https://dolbix-dev.test.studio.lyzr.ai/api/chat", {
-      const response = await fetch("http://localhost:5000/api/chat", {
+      const response = await fetch("https://dolbix-dev.test.studio.lyzr.ai/api/chat", {
+      // const response = await fetch("http://localhost:5000/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -919,7 +957,7 @@ const ProcessFiles = () => {
                            {report.name} - {report.month} / {report.year}
                           </span>
                           <span className="text-xs text-gray-400">
-                            {new Date(report.timestamp).toLocaleString()}
+                            {formatDate(report.timestamp)}
                           </span>
                         </div>
                         <div className="flex items-center gap-3">

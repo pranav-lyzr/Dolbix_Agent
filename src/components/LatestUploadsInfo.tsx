@@ -52,12 +52,15 @@ const LatestUploadsInfo = () => {
     return <div className="text-sm text-gray-500">No data source information available</div>;
   }
 
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleString();
-    } catch (e) {
-      return dateString;
-    }
+
+
+  const formatDate = (timestamp: string) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
   };
 
   return (

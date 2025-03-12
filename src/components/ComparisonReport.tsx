@@ -4,11 +4,11 @@ import { v4 as uuidv4 } from "uuid";
 import ChatMessage, { MessageType } from "./ChatMessage";
 import { compareReports } from "../services/ApiServices";
 
-type UploadData = {
-  upload_id: number;
-  file_name: string;
-  timestamp: string;
-};
+// type UploadData = {
+//   upload_id: number;
+//   file_name: string;
+//   timestamp: string;
+// };
 
 type ReportData = {
   report_id: number;
@@ -78,14 +78,8 @@ const ComparisonReport = () => {
   // const [selectedType, setSelectedType] = useState<'crm' | 'erp' | 'datacode' | 'report'>('report');
   const selectedType = 'report';
   const [uploadData, setUploadData] = useState<{
-    crm: UploadData[];
-    erp: UploadData[];
-    datacode: UploadData[];
     reports: ReportData[];
   }>({
-    crm: [],
-    erp: [],
-    datacode: [],
     reports: [],
   });
 
@@ -132,21 +126,19 @@ const ComparisonReport = () => {
     
     const fetchData = async () => {
       try {
-        const [crmRes, erpRes, datacodeRes, reportsRes] = await Promise.all([
-          fetch("http://localhost:5000/api/uploads/crm"),
-          fetch("http://localhost:5000/api/uploads/erp"),
-          fetch("http://localhost:5000/api/uploads/datacode"),
+        const [reportsRes] = await Promise.all([
+          // fetch("http://localhost:5000/api/uploads/crm"),
+          // fetch("http://localhost:5000/api/uploads/erp"),
+          // fetch("http://localhost:5000/api/uploads/datacode"),
           fetch("https://dolbix-dev.test.studio.lyzr.ai/api/reports"),
         ]);
 
-        const [crm, erp, datacode, reports] = await Promise.all([
-          crmRes.json(),
-          erpRes.json(),
-          datacodeRes.json(),
+        const [ reports] = await Promise.all([
+
           reportsRes.json(),
         ]);
         console.log("Reports",reports);
-        setUploadData({ crm, erp, datacode, reports });
+        setUploadData({ reports });
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -331,36 +323,29 @@ const ComparisonReport = () => {
     const reports = uploadData.reports;
     if (!reports || reports.length === 0) return [];
   
-    // Group reports by month-year and select latest in each group
+    // Group reports by month-year while preserving all entries
     const groups = reports.reduce((acc, report) => {
       const key = `${report.year}-${report.month}`;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
+      if (!acc[key]) acc[key] = [];
       acc[key].push(report);
       return acc;
     }, {} as Record<string, ReportData[]>);
   
-    // Process each group to get latest report
-    const groupedArray = Object.entries(groups).map(([key, reports]) => {
-      const sorted = [...reports].sort((a, b) => 
-        new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime()
-      );
-      return {
+    // Process groups and sort internal reports
+    return Object.entries(groups)
+      .map(([key, reports]) => ({
         key,
         month: reports[0].month,
         year: reports[0].year,
-        latestReport: sorted[0],
-      };
-    });
-  
-    // Sort groups by year and month (newest first)
-    return groupedArray.sort((a, b) => {
-      const yearA = parseInt(a.year);
-      const yearB = parseInt(b.year);
-      if (yearB !== yearA) return yearB - yearA;
-      return monthOrder[b.month as Month] - monthOrder[a.month as Month];
-    });
+        reports: [...reports].sort((a, b) => 
+          new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime()
+        )
+      }))
+      .sort((a, b) => {
+        const yearDiff = parseInt(b.year) - parseInt(a.year);
+        return yearDiff !== 0 ? yearDiff : 
+          monthOrder[b.month as Month] - monthOrder[a.month as Month];
+      });
   }, [uploadData.reports]);
 
   
@@ -405,7 +390,11 @@ const ComparisonReport = () => {
   
   const formatTimestamp = (timestamp: string) => {
     if (!timestamp) return "N/A";
-    return new Date(timestamp).toLocaleString();
+    const date = new Date(timestamp);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -586,12 +575,19 @@ const ComparisonReport = () => {
                 >
                   <option value="">Select Report</option>
                   {groupedReports.map((group) => (
-                    <option 
-                      key={group.latestReport.report_id} 
-                      value={group.latestReport.report_id}
+                    <optgroup 
+                      key={group.key} 
+                      label={`${group.month} ${group.year}`}
                     >
-                      {group.month} {group.year} - {group.latestReport.name} {formatTimestamp(group.latestReport.generated_at)}
-                    </option>
+                      {group.reports.map((report) => (
+                        <option 
+                          key={report.report_id} 
+                          value={report.report_id}
+                        >
+                          {report.name || 'Unnamed Report'} - {formatTimestamp(report.generated_at)}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -618,12 +614,19 @@ const ComparisonReport = () => {
                 >
                   <option value="">Select Report</option>
                   {groupedReports.map((group) => (
-                    <option 
-                      key={group.latestReport.report_id} 
-                      value={group.latestReport.report_id}
+                    <optgroup 
+                      key={group.key} 
+                      label={`${group.month} ${group.year}`}
                     >
-                      {group.month} {group.year} - {group.latestReport.name} {formatTimestamp(group.latestReport.generated_at)}
-                    </option>
+                      {group.reports.map((report) => (
+                        <option 
+                          key={report.report_id} 
+                          value={report.report_id}
+                        >
+                          {report.name || 'Unnamed Report'} - {formatTimestamp(report.generated_at)}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>

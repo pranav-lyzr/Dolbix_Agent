@@ -1,3 +1,4 @@
+
 export type ComparisonResponse = {
   comparison_id: number;
   old_report_id: number;
@@ -76,18 +77,41 @@ export const compareReports = async (
 ) => {
   try {
     const LYZR_API_URL = "https://agent-prod.studio.lyzr.ai/v3/inference/chat/";
-    const LYZR_API_KEY = "sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF"; // Store securely in environment variables
-    console.log("oldReportId, newReportId",oldReportId,newReportId);
-    const message = `
-      I need to analyze two sales reports. Here's my query: ${query}
+    const LYZR_API_KEY = "sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF"; // Secure in env variables
+    console.log("oldReportId, newReportId", oldReportId, newReportId);
 
-      First report (older):
-      ${JSON.stringify(oldReportData, null, 2)}
-
-      Second report (newer):
-      ${JSON.stringify(newReportData, null, 2)}
-
-      Please analyze the differences between these reports, focusing on changes in projects, revenue, rankings, and trends.
+    // First, send the older report uncompressed
+    const oldReportMessage = `
+      Please store the following older sales report data for later comparison:
+      ${JSON.stringify(oldReportData)}
+    `;
+    
+    const oldResponse = await fetch(LYZR_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": LYZR_API_KEY,
+      },
+      body: JSON.stringify({
+        user_id: "pranav@lyzr.ai",
+        agent_id: "67cc88bd4f4888a85278d101",
+        session_id: sessionId,
+        message: oldReportMessage,
+      })
+    });
+    
+    if (!oldResponse.ok) {
+      const errorData = await oldResponse.json();
+      throw new Error(errorData.error || `API request failed for the old report: ${oldResponse.status}`);
+    }
+    
+    // Next, send the newer report and instruct a detailed comparison
+    const newReportMessage = `
+      I have stored an older sales report. Now, here is the newer sales report data:
+      ${JSON.stringify(newReportData)}
+      
+      Please compare the two reports in detail. Focus on differences in projects, revenue, rankings, and trends.
+      My query is: ${query}
     `;
 
     const response = await fetch(LYZR_API_URL, {
@@ -95,20 +119,18 @@ export const compareReports = async (
       headers: {
         "Content-Type": "application/json",
         "x-api-key": LYZR_API_KEY,
-        "Access-Control-Allow-Origin" : "*"
       },
       body: JSON.stringify({
         user_id: "pranav@lyzr.ai",
         agent_id: "67cc88bd4f4888a85278d101",
-        session_id: "67cc88bd4f4888a85278d101",
-        message: message,
-      }),
-      mode: "no-cors"
+        session_id: sessionId,
+        message: newReportMessage,
+      })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || `API request failed: ${response.status}`);
+      throw new Error(errorData.error || `API request failed for the new report: ${response.status}`);
     }
 
     const responseData = await response.json();
@@ -123,6 +145,7 @@ export const compareReports = async (
     throw error;
   }
 };
+
 
 
 
