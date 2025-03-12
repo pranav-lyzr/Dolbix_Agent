@@ -1,20 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Loader2, ChartBar, MessageSquare, Menu, Download, Send , FileSpreadsheet, ChevronRight, ChevronLeft, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import { Upload, Loader2, ChartBar, Menu, Download, Send, Zap, FileSpreadsheet, ChevronRight, ChevronLeft, CheckCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 // import { jsPDF } from 'jspdf';
 import ReactMarkdown from "react-markdown";
 import 'jspdf-autotable';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
-import { ChartViewer } from './components/ChartViewer';
+// import { ChartViewer } from './components/ChartViewer';
 import logo from './assets/main logo.png';
+import Index from './Index';
+import ComparisonReport from "./components/ComparisonReport";
+import ReportNameModal from './components/ReportNameModal';
+import LatestUploadsInfo from './components/LatestUploadsInfo';
 
 
-type LocationState = {
-  kitoneData: File;
-  zacData: File;
-  dataCodeData: File;
-} | null;
 type Message = {
   id: string;
   text: string;
@@ -56,15 +54,24 @@ type ReportData = {
 
 type ReportEntry = {
   id: string;
+  uid: string;
+  month: string;
+  year:string;
   data: ReportData[];
   timestamp: number;
   isCollapsed: boolean;
+  name: string; // Add this to store the report name
 };
 
 const ProcessFiles = () => {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'performance' | 'chat' | 'chart' | 'data-validation'>('performance');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    | "performance"
+    | "chat"
+    | "chart"
+    | "data-validation"
+    | "upload"
+    | "comparison"
+  >("performance");  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -79,12 +86,15 @@ const ProcessFiles = () => {
   // const [newComment, setNewComment] = useState<{ [key: string]: string }>({});
   const [previousReports, setPreviousReports] = useState<ReportEntry[]>([]);
   const [sessionID, setSessionID] = useState<string>('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(name: string) => void>(() => () => null);
+  const [actionDescription, setActionDescription] = useState<'generate' | 'regenerate'>('generate');
 
   useEffect(() => {
     setSessionID(Date.now().toString()); // Generate a unique sessionID
   }, []);
   
-  const state = location.state as LocationState;
 
   useEffect(() => {
     const savedMessages = localStorage.getItem('chatMessages');
@@ -128,9 +138,14 @@ const ProcessFiles = () => {
   };
 
   const handleDataValidation = async () => {
-    if (!state) return;
-    
+    console.log("printing ")
     setIsValidating(true);
+    const response = await fetch('https://dolbix-dev.test.studio.lyzr.ai/api/latest_uploads');
+    if (!response.ok) {
+      throw new Error('Failed to fetch latest uploads');
+    }
+    const data = await response.json();
+    console.log("data",data);
     try {
       // Validate Kintone Data
       const kintoneResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
@@ -143,7 +158,7 @@ const ProcessFiles = () => {
           user_id: "pranav@lyzr.ai",
           agent_id: "67c6a7490606a0f240482d8c",
           session_id: sessionID,
-          message: JSON.stringify({ kintone_data: state.kitoneData })
+          message: JSON.stringify({ kintone_data: data.crm.data })
         })
       });
   
@@ -158,7 +173,7 @@ const ProcessFiles = () => {
           user_id: "pranav@lyzr.ai",
           agent_id: "67c6a7750606a0f240482d8d",
           session_id: sessionID,
-          message: JSON.stringify({ zac_data: state.zacData })
+          message: JSON.stringify({ zac_data: data.erp.data })
         })
       });
   
@@ -273,66 +288,109 @@ const ProcessFiles = () => {
     window.URL.revokeObjectURL(url);
   };
   
+  const handleModalSubmit = (name: string) => {
+    if (pendingAction && name.trim()) {
+      pendingAction(name); // Execute the stored action with the report name
+    }
+    setIsModalOpen(false);
+    setPendingAction(() => () => null); // Reset to a no-op function
+  };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const generateReport = async () => {
+  const fetchLatestReport = async () => {
     setIsLoading(true);
-    console.log(sessionID);
     try {
-      const response = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
-        method: 'POST',
-        headers: {
-          'x-api-key': 'sk-default-8roIgovhvCvAZtXXi4ZdosCHmnTt0LiF',
-          'Content-Type': 'application/json',
-        },
-    
-        body: JSON.stringify({
-          user_id: "pranav@lyzr.ai",
-          agent_id: "67c6a7d30606a0f240482d8e",
-          session_id: sessionID,
-          message: JSON.stringify({
-            zac_data: state?.zacData,
-            datacode_data: state?.dataCodeData,
-            kintone_data: state?.kitoneData,
-            chat_history: messages.map(m => ({ // Include chat history
-              text: m.text,
-              sender: m.sender,
-              instructions: m.sender === 'user' ? m.text : null
-            }))
-          })
-        })
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok');
-      
+      const response = await fetch("https://dolbix-dev.test.studio.lyzr.ai/api/latest_report");
+      if (!response.ok) throw new Error("Failed to fetch report");
+  
       const data = await response.json();
-      let reportData = [];
-
-      if (typeof data.response === 'string') {
-        const jsonMatch = data.response.match(/```json\n([\s\S]*?)\n```/);
-        if (jsonMatch) {
-          reportData = JSON.parse(jsonMatch[1]);
-        }
-      }
-
-      setPreviousReports(prev => [{
-        id: Date.now().toString(),
-        data: reportData,
-        timestamp: Date.now(),
-        isCollapsed: false
-      }, ...prev]);
-
+  
+      setPreviousReports((prev) => [
+        {
+          id: data.report_id.toString(),
+          uid: `report-${data.report_id}-${Date.now()}`,
+          data: data.report_snapshot,
+          timestamp: new Date(data.generated_at).getTime(),
+          isCollapsed: false,
+          name: data.name || "Unnamed Report", // Use the name from the API, fallback to default
+          month: data.month,
+          year: data.year,
+        },
+        ...prev,
+      ]);
     } catch (error) {
-      console.error('Error generating report:', error);
+      console.error("Error fetching report:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const toggleReportCollapse = (reportId: string) => {
+  const regenerateReport = async (reportName: string) => {
+    setIsLoading(true);
+    try {
+      const chatHistory = messages
+        .map((msg) => `${msg.sender === "user" ? "User" : "Assistant"}: ${msg.text}`)
+        .join("\n");
+      const latestReport = previousReports[0]?.data || [];
+  
+      // const response = await fetch("https://dolbix-dev.test.studio.lyzr.ai/api/chat", {
+      const response = await fetch("http://localhost:5000/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: chatHistory + JSON.stringify(latestReport),
+          session_id: sessionID,
+          name: reportName, // Pass the report name to the API
+        }),
+      });
+  
+      if (!response.ok) throw new Error("Failed to regenerate report");
+  
+      const data = await response.json();
+  
+      setPreviousReports((prev) => [
+        {
+          id: `report-${Date.now()}`,
+          uid: `report-${data.report_id}-${Date.now()}`,
+          data: data.report_data,
+          timestamp: Date.now(),
+          isCollapsed: false,
+          name: reportName, // Store the name provided by the user
+          month:data.month,
+          year:data.year
+        },
+        ...prev,
+      ]);
+  
+      const systemMessage: Message = {
+        id: Date.now().toString(),
+        text: `Successfully regenerated report "${reportName}" based on chat history`,
+        sender: "bot",
+        timestamp: Date.now(),
+        jsonData: data.report_data,
+      };
+  
+      setMessages((prev) => [...prev, systemMessage]);
+    } catch (error) {
+      console.error("Regeneration error:", error);
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        text: "Failed to regenerate report. Please try again.",
+        sender: "bot",
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleReportCollapse = (reportUid: string) => {
     setPreviousReports(prev => 
       prev.map(report => 
-        report.id === reportId 
+        report.uid === reportUid 
           ? {...report, isCollapsed: !report.isCollapsed} 
           : report
       )
@@ -365,9 +423,50 @@ const ProcessFiles = () => {
   //   });
   // };
 
+  const generateNewReport = async (reportName: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `https://dolbix-dev.test.studio.lyzr.ai/api/generate_latest_report?name=${encodeURIComponent(reportName)}`,
+        {
+          method: "POST",  // ✅ Use POST instead of the default GET
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}), // ✅ Ensure the request body is not missing
+        }
+      );
+  
+      if (!response.ok) throw new Error("Failed to generate report");
+  
+      const data = await response.json();
+  
+      setPreviousReports((prev) => [
+        {
+          id: data.report_id.toString(),
+          uid: `report-${data.report_id}-${Date.now()}`,
+          data: data.report_snapshot,
+          timestamp: new Date(data.generated_at).getTime(),
+          isCollapsed: false,
+          name: reportName, // Store the name provided by the user
+          month: data.month,
+          year: data.year,
+        },
+        ...prev,
+      ]);
+    } catch (error) {
+      console.error("Error generating report:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+
   const simulateBotResponse = async (userMessage: string) => {
     try {
       // Call the first agent
+      console.log("Previous Reports",previousReports[0]);
       const firstAgentResponse = await fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
         method: 'POST',
         headers: {
@@ -380,10 +479,7 @@ const ProcessFiles = () => {
           session_id: sessionID,
           message: JSON.stringify({
             user_message: userMessage, // Pass user message
-            zac_data: state?.zacData,
-            datacode_data: state?.dataCodeData,
-            kintone_data: state?.kitoneData,
-            previous_reports: previousReports
+            previous_reports: previousReports[0]
           })
         })
       });
@@ -525,81 +621,85 @@ const ProcessFiles = () => {
     setIsChatLoading(false);
   };
 
-  const downloadExcelFromJson = (jsonData: any) => {
-    console.log('Input data:', jsonData);
-    let extractedJson = jsonData;
+  // const downloadExcelFromJson = (jsonData: any) => {
+  //   console.log('Input data:', jsonData);
+  //   let extractedJson = jsonData;
 
-    // Handle string input (JSON in markdown format)
-    if (typeof jsonData === 'string') {
-        const jsonMatch = jsonData.match(/```json\n([\s\S]*?)\n```/);
-        if (jsonMatch) {
-          const extractedJson = JSON.parse(jsonMatch[1]);
+  //   // Handle string input (JSON in markdown format)
+  //   if (typeof jsonData === 'string') {
+  //       const jsonMatch = jsonData.match(/```json\n([\s\S]*?)\n```/);
+  //       if (jsonMatch) {
+  //         const extractedJson = JSON.parse(jsonMatch[1]);
           
-          setPreviousReports(prev => [{
-            id: sessionID,
-            data: extractedJson,
-            timestamp: Date.now(),
-            isCollapsed: false
-          }, ...prev]);
+  //         setPreviousReports(prev => [{
+  //           id: `excel-report-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  //           uid: `excel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Add UID
+  //           data: extractedJson,
+  //           timestamp: Date.now(),
+  //           isCollapsed: false,
+  //           name: "Report",
+  //           month: "dd",
+  //           year: "dd"
+  //         }, ...prev]);
 
-        } else {
-            console.error("JSON parsing failed. Invalid format.");
-            return;
-        }
-    }
+  //       } else {
+  //           console.error("JSON parsing failed. Invalid format.");
+  //           return;
+  //       }
+  //   }
 
-    // Function to recursively search for the first array in the object
-    const findFirstArray = (obj: any): any[] | null => {
-        if (Array.isArray(obj)) {
-            return obj;
-        }
+  //   // Function to recursively search for the first array in the object
+  //   const findFirstArray = (obj: any): any[] | null => {
+  //       if (Array.isArray(obj)) {
+  //           return obj;
+  //       }
         
-        if (typeof obj === 'object' && obj !== null) {
-            for (const value of Object.values(obj)) {
-                const result = findFirstArray(value);
-                if (result) {
-                    return result;
-                }
-            }
-        }
+  //       if (typeof obj === 'object' && obj !== null) {
+  //           for (const value of Object.values(obj)) {
+  //               const result = findFirstArray(value);
+  //               if (result) {
+  //                   return result;
+  //               }
+  //           }
+  //       }
         
-        return null;
-    };
+  //       return null;
+  //   };
 
-    // Extract the array from the data structure
-    let dataArray: any[] = [];
+  //   // Extract the array from the data structure
+  //   let dataArray: any[] = [];
     
-    if (Array.isArray(extractedJson)) {
-        dataArray = extractedJson;
-    } else if (typeof extractedJson === 'object' && extractedJson !== null) {
-        const foundArray = findFirstArray(extractedJson);
-        if (foundArray) {
-            dataArray = foundArray;
-        } else {
-            console.error("No array found in the data structure:", extractedJson);
-            return;
-        }
-    } else {
-        console.error("Invalid data structure:", extractedJson);
-        return;
-    }
+  //   if (Array.isArray(extractedJson)) {
+  //       dataArray = extractedJson;
+  //   } else if (typeof extractedJson === 'object' && extractedJson !== null) {
+  //       const foundArray = findFirstArray(extractedJson);
+  //       if (foundArray) {
+  //           dataArray = foundArray;
+  //       } else {
+  //           console.error("No array found in the data structure:", extractedJson);
+  //           return;
+  //       }
+  //   } else {
+  //       console.error("Invalid data structure:", extractedJson);
+  //       return;
+  //   }
 
-    if (dataArray.length === 0) {
-        console.error("No data to export");
-        return;
-    }
+  //   if (dataArray.length === 0) {
+  //       console.error("No data to export");
+  //       return;
+  //   }
 
-    // Generate Excel file
-    try {
-        const worksheet = XLSX.utils.json_to_sheet(dataArray);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
-        XLSX.writeFile(workbook, 'report.xlsx');
-        console.log('Report generated successfully:', dataArray);
-    } catch (error) {
-        console.error("Excel generation failed:", error);
-    }
-  };
+  //   // Generate Excel file
+  //   try {
+  //       const worksheet = XLSX.utils.json_to_sheet(dataArray);
+  //       const workbook = XLSX.utils.book_new();
+  //       XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
+  //       XLSX.writeFile(workbook, 'report.xlsx');
+  //       console.log('Report generated successfully:', dataArray);
+  //   } catch (error) {
+  //       console.error("Excel generation failed:", error);
+  //   }
+  // };
 
 
 
@@ -697,6 +797,27 @@ const ProcessFiles = () => {
                 <ChartCandlestick className="w-5 h-5" />
                 {isSidebarOpen && <span>Chart</span>}
               </button> */}
+
+              <button 
+                onClick={() => setActiveTab('upload')}
+                className={`w-full flex items-center gap-3 p-2 text-sm font-medium ${
+                  activeTab === 'upload' ? 'bg-gray-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'
+                } rounded-lg`}
+              >
+                <Upload  className="w-5 h-5" />
+                {isSidebarOpen && <span>Upload</span>}
+              </button>
+              <button
+                onClick={() => setActiveTab("comparison")}
+                className={`w-full flex items-center gap-3 p-2 text-sm font-medium ${
+                  activeTab === "comparison"
+                    ? "bg-gray-100 text-purple-700"
+                    : "text-gray-600 hover:bg-gray-100"
+                } rounded-lg`}
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+                {isSidebarOpen && <span>Comparison Report</span>}
+              </button>
             </div>
           </nav>
         </div>
@@ -705,7 +826,9 @@ const ProcessFiles = () => {
         <div className={`flex-1 p-8 pt-25 ${isSidebarOpen ? "ml-60" : "ml-15"}`}>
           {activeTab === 'data-validation' ? (
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-medium text-gray-800 mb-6">Data Validation</h2>
+              <h2 className="text-2xl font-medium text-gray-800 ">Data Validation</h2>
+              <LatestUploadsInfo />
+              <br /><br />
               <div className="space-y-6">
                 <button
                   onClick={handleDataValidation}
@@ -745,23 +868,55 @@ const ProcessFiles = () => {
               isSidebarOpen ? "ml-65" : "ml-15"
             }`}>
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-medium text-gray-800">Performance Reports</h2>
-                <button
-                  onClick={() => generateReport()}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  {isLoading ? 'Generating...' : 'Create Report'}
-                </button>
+                <div>
+                  <h2 className="text-2xl font-medium text-gray-800">Performance Reports</h2>
+                  <LatestUploadsInfo />
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
+                  >
+                    {isLoading ? "Processing..." : "Report Actions"}
+                    <ChevronDown className="ml-2 w-5 h-5" />
+                  </button>
+
+                  {isOpen && (
+                    <div className="absolute mt-2 w-48 bg-white shadow-lg rounded-lg border">
+                      <button
+                        onClick={() => {
+                          fetchLatestReport();
+                          setIsOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800"
+                      >
+                        {isLoading ? "Fetching..." : "Fetch Latest Report"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPendingAction(() => (name: string) => generateNewReport(name));
+                          setActionDescription("generate");
+                          setIsModalOpen(true);
+                          setIsOpen(false); // Close the dropdown
+                        }}
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800"
+                      >
+                        {isLoading ? "Generating..." : "Generate Report"}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {previousReports.length > 0 ? (
                 <div className="space-y-8">
-                  {previousReports.map((report, index) => (
-                    <div key={report.id} className="bg-white rounded-xl p-6">
+                  {previousReports.map((report) => (
+                    <div key={report.uid}  className="bg-white rounded-xl p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
                           <span className="text-sm font-medium text-gray-500">
-                            Report {previousReports.length - index}
+                           {report.name} - {report.month} / {report.year}
                           </span>
                           <span className="text-xs text-gray-400">
                             {new Date(report.timestamp).toLocaleString()}
@@ -778,11 +933,11 @@ const ProcessFiles = () => {
                             onClick={() => setIsChatOpen(true)}
                             className="p-2 hover:bg-gray-200 rounded-lg flex items-center gap-2"
                           >
-                            <MessageSquare className="w-5 h-5 text-gray-600" />
-                            <span className="text-sm text-gray-700">Fine-tune with AI</span>
+                            <Zap className="w-5 h-5 text-gray-600" />
+                            <span className="text-sm text-gray-700">Improve with AI</span>
                           </button>
                           <button
-                            onClick={() => toggleReportCollapse(report.id)}
+                            onClick={() => toggleReportCollapse(report.uid)}
                             className="p-2 hover:bg-gray-200 rounded-lg"
                           >
                             {report.isCollapsed ? (
@@ -815,18 +970,26 @@ const ProcessFiles = () => {
                               <tbody>
                                 {report.data.map((item, rowIndex) => (
                                   <tr 
-                                    key={rowIndex}
+                                    key={`${report.id}-${rowIndex}-${item['Project Code']}`} 
                                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                                   >
-                                    {Object.entries(item).map(([key, value], colIndex) => (
+                                    {Object.entries(item).map(([_key, value], colIndex) => (
                                       <td 
-                                        key={key}
+                                        key={`${report.id}-${rowIndex}-${colIndex}`} 
                                         className={`py-4 px-4 text-sm text-gray-800 ${
-                                          colIndex === 0? 'sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''
+                                          colIndex === 0 ? 'sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]' : ''
                                         }`}
                                       >
-                                        {formatValue(value)}
-                                      </td>
+                                        <span 
+                                          title={String(value)} 
+                                          className="cursor-help border-b border-dashed border-gray-300"
+                                        >
+                                          {String(value).length > 10 ? 
+                                            `${String(value).substring(0, 5)}...` : 
+                                            formatValue(value)
+                                          }
+                                        </span>
+                                      </td> 
                                     ))}
                                   </tr>
                                 ))}
@@ -852,10 +1015,16 @@ const ProcessFiles = () => {
                 </div>
               )}
             </div>
-          ) : activeTab === 'chart' ? (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-              <ChartViewer />
+          // ) : activeTab === 'chart' ? (
+          //   <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+          //     <ChartViewer />
+          //   </div>
+            ) : activeTab === 'upload' ? (
+            <div className="">
+              <Index />
             </div>
+          ) : activeTab === 'comparison' ? (
+            <ComparisonReport />
           ) : null}
 
           {/* Chat panel */}
@@ -877,7 +1046,7 @@ const ProcessFiles = () => {
               {isChatOpen && (
                 <div className="h-full flex flex-col">
                   <div className="p-4 border-b border-gray-200">
-                    <h2 className="font-semibold">Fine-tune Report with AI</h2>
+                    <h2 className="font-semibold">Improve with AI</h2>
                   </div>
                 
                   <div className="flex-1 overflow-y-auto p-4">
@@ -918,7 +1087,7 @@ const ProcessFiles = () => {
                                       <Download className="w-3 h-3" />
                                       DOCX
                                     </button>
-                                    {message.jsonData && (
+                                    {/* {message.jsonData && (
                                       <button
                                         onClick={() => downloadExcelFromJson(message.jsonData)}
                                         className="flex items-center gap-1 text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-50"
@@ -926,7 +1095,7 @@ const ProcessFiles = () => {
                                         <Download className="w-3 h-3" />
                                         Excel
                                       </button>
-                                    )}
+                                    )} */}
                                   </div>
                                   </div>
                                 )}
@@ -964,7 +1133,11 @@ const ProcessFiles = () => {
                       </button>
                     </div>
                     <button
-                      onClick={() => generateReport()}
+                      onClick={() => {
+                        setActionDescription("regenerate");
+                        setPendingAction(() => (name: string) => regenerateReport(name));
+                        setIsModalOpen(true);
+                      }}
                       className="w-full mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
                     >
                       Regenerate Report
@@ -976,6 +1149,12 @@ const ProcessFiles = () => {
           )}
         </div>
       </div>
+      <ReportNameModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        action={actionDescription}
+      />
     </div>
   );
 };
