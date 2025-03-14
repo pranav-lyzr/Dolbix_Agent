@@ -96,15 +96,15 @@ const ProcessFiles = () => {
   }, []);
   
 
-  useEffect(() => {
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
-    }
-  }, []);
-  useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
-  }, [messages]);
+  // useEffect(() => {
+  //   const savedMessages = localStorage.getItem('chatMessages');
+  //   if (savedMessages) {
+  //     setMessages(JSON.parse(savedMessages));
+  //   }
+  // }, []);
+  // useEffect(() => {
+  //   localStorage.setItem('chatMessages', JSON.stringify(messages));
+  // }, [messages]);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -186,7 +186,7 @@ const ProcessFiles = () => {
       // Process ZAC Data in parallel
       let zacValidationResults = [];
       if (data.erp?.data?.length) {
-        const zacChunks = chunkArray(data.erp.data, 10); // Adjust chunk size as needed
+        const zacChunks = chunkArray(data.erp.data, 50); // Adjust chunk size as needed
   
         const zacPromises = zacChunks.map(chunk =>
           fetch('https://agent-prod.studio.lyzr.ai/v3/inference/chat/', {
