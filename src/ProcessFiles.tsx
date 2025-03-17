@@ -443,7 +443,7 @@ const ProcessFiles = () => {
   
       const systemMessage: Message = {
         id: Date.now().toString(),
-        text: `Successfully regenerated report "${reportName}" based on chat history`,
+        text: `チャット履歴に基づいてレポートが正常に再生成されました`,
         sender: "bot",
         timestamp: Date.now(),
         jsonData: data.report_data,
@@ -454,7 +454,7 @@ const ProcessFiles = () => {
       console.error("Regeneration error:", error);
       const errorMessage: Message = {
         id: Date.now().toString(),
-        text: "Failed to regenerate report. Please try again.",
+        text: "レポートの再生成に失敗しました。ページを再読み込みしてもう一度お試しください。",
         sender: "bot",
         timestamp: Date.now(),
       };
