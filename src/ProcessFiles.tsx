@@ -11,6 +11,7 @@ import Index from './Index';
 import ComparisonReport from "./components/ComparisonReport";
 import ReportNameModal from './components/ReportNameModal';
 import LatestUploadsInfo from './components/LatestUploadsInfo';
+import CustomReportModal from './components/CustomReportModal';
 
 
 type Message = {
@@ -90,6 +91,7 @@ const ProcessFiles = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<(name: string) => void>(() => () => null);
   const [actionDescription, setActionDescription] = useState<'generate' | 'regenerate'>('generate');
+  const [showCustomReportModal, setShowCustomReportModal] = useState(false);
 
   useEffect(() => {
     setSessionID(Date.now().toString()); // Generate a unique sessionID
@@ -220,6 +222,43 @@ const ProcessFiles = () => {
   };
   
   
+
+  const handleCustomReportSubmit = async (selectedData: {
+    crm_id?: number;
+    erp_id?: number;
+    datacode_id?: number;
+    name: string;
+  }) => {
+    setIsLoading(true);
+    setShowCustomReportModal(false);
+    
+    try {
+      const response = await fetch('https://dolbix-dev.test.studio.lyzr.ai/api/generate_report', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          upload_ids: [selectedData.crm_id,selectedData.erp_id,selectedData.datacode_id], // Ensure this is an array
+          name: selectedData.name,
+        }),
+      });
+    
+      if (!response.ok) {
+        const errorData = await response.json(); // Get error details if available
+        throw new Error(`Failed to generate custom report: ${errorData.message || response.statusText}`);
+      }
+    
+      console.log(`Report "${selectedData.name}" generated successfully`);
+      fetchLatestReport(); // Refresh reports list
+    
+    } catch (error) {
+      console.error('Error generating custom report:', error);
+    } finally {
+      setIsLoading(false);
+    }    
+  };
 
 
   // const downloadPDF = () => {
@@ -921,7 +960,7 @@ const ProcessFiles = () => {
                   </button>
 
                   {isOpen && (
-                    <div className="absolute mt-2 w-48 bg-white shadow-lg rounded-lg border">
+                    <div className="absolute mt-2 w-48 bg-white shadow-lg rounded-lg border z-999">
                       <button
                         onClick={() => {
                           fetchLatestReport();
@@ -940,12 +979,27 @@ const ProcessFiles = () => {
                         }}
                         className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800"
                       >
-                        {isLoading ? "Generating..." : "Generate Report"}
+                        {isLoading ? "Generating..." : "Generate Latest Report"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowCustomReportModal(true);
+                          setIsOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-800 flex items-center"
+                      >
+                        Create Custom Report
                       </button>
                     </div>
                   )}
                 </div>
               </div>
+
+              <CustomReportModal
+                isOpen={showCustomReportModal}
+                onClose={() => setShowCustomReportModal(false)}
+                onSubmit={handleCustomReportSubmit}
+              />
 
               {previousReports.length > 0 ? (
                 <div className="space-y-8">
