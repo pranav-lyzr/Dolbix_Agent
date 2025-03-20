@@ -226,7 +226,7 @@ const ComparisonReport = () => {
       setReportDetails({ report1: reportSnapshot1, report2: reportSnapshot2 });
       setChatActive(true);
   
-      const initialQuery = "Compare the reports and highlight the key differences.";
+      const initialQuery = "レポートを比較し、主な違いを強調します。";
       const newUserMessage: MessageType = {
         id: uuidv4(),
         content: initialQuery,
@@ -251,7 +251,7 @@ const ComparisonReport = () => {
   
       const newAiMessage: MessageType = {
         id: uuidv4(),
-        content: response.response || "No significant differences found.",
+        content: response.response || "有意な差は見つかりませんでした。",
         sender: "ai",
         timestamp: new Date(),
       };
@@ -261,7 +261,7 @@ const ComparisonReport = () => {
       console.error("Error generating comparison:", error);
       const errorMessage: MessageType = {
         id: uuidv4(),
-        content: "Failed to generate comparison. Please try again.",
+        content: "比較を生成できませんでした。ページを再読み込みしてもう一度お試しください",
         sender: "ai",
         timestamp: new Date(),
       };
@@ -299,7 +299,7 @@ const ComparisonReport = () => {
       console.log("reponse 2",response);
       const newAiMessage: MessageType = {
         id: uuidv4(),
-        content: response.response || "I couldn't find meaningful differences.",
+        content: response.response || " 意味のある違いは見つかりませんでした。",
         sender: "ai",
         timestamp: new Date(),
       };
@@ -309,7 +309,7 @@ const ComparisonReport = () => {
       console.error("Error sending message:", error);
       const errorMessage: MessageType = {
         id: uuidv4(),
-        content: "Error processing request. Please try again.",
+        content: "リクエストの処理中にエラーが発生しました。ページを再読み込みしてからもう一度お試しください。",
         sender: "ai",
         timestamp: new Date(),
       };
